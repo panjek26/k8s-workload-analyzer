@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package workloadanalyzer;
+option go_package = "pkg/api";
+
+service WorkloadAnalyzer {
+  rpc AnalyzeWorkload (AnalyzeRequest) returns (AnalyzeResponse) {}
+}
+
+message AnalyzeRequest {
+  string namespace = 1;
+  string workload_type = 2;  // deployment, statefulset, etc.
+  string workload_name = 3;
+  map<string, string> metrics = 4;
+}
+
+message AnalyzeResponse {
+  string analysis = 1;
+  repeated Recommendation recommendations = 2;
+}
+
+message Recommendation {
+  string category = 1;
+  string description = 2;
+  float confidence_score = 3;
+}
