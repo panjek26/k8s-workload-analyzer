@@ -38,7 +38,7 @@ go run cmd/main.go -api-key "your-gpt-api-key" -port 50052
 
 ```sh
 grpcurl -plaintext -d '{
-  "namespace": "sit",
+  "namespace": "your-namespace",
   "workload_type": "deployment",
   "workload_name": "your-deployment-name"
 }' localhost:50052 analyzer.WorkloadAnalyzer/AnalyzeWorkload
