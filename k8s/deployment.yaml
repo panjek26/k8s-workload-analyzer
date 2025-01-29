@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-health
+  namespace: dev
+  labels:
+    app: grpc-health
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpc-health
+  template:
+    metadata:
+      labels:
+        app: grpc-health
+    spec:
+      containers:
+      - name: grpc-health
+        image: asia-southeast2-docker.pkg.dev/bfi-devsecops/bfi-github-actions/grpc_health:2
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: grpc
+        readinessProbe:
+          grpc:
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          grpc:
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
