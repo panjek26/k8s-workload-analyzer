@@ -1,7 +1,7 @@
 syntax = "proto3";
 
-package workloadanalyzer;
-option go_package = "pkg/api";
+package analyzer;
+option go_package = "k8s-workload-analyzer/api/proto";
 
 service WorkloadAnalyzer {
   rpc AnalyzeWorkload (AnalyzeRequest) returns (AnalyzeResponse) {}
@@ -9,9 +9,9 @@ service WorkloadAnalyzer {
 
 message AnalyzeRequest {
   string namespace = 1;
-  string workload_type = 2;  // deployment, statefulset, etc.
+  string workload_type = 2;
   string workload_name = 3;
-  map<string, string> metrics = 4;
+  string yaml_content = 4;
 }
 
 message AnalyzeResponse {
@@ -22,5 +22,6 @@ message AnalyzeResponse {
 message Recommendation {
   string category = 1;
   string description = 2;
-  float confidence_score = 3;
+  string severity = 3;
+  string suggested_action = 4;
 }

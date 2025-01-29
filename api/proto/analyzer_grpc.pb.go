@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: api/workload_analyzer.proto
+// source: api/proto/analyzer.proto
 
-package api
+package proto
 
 import (
 	context "context"
@@ -19,7 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	WorkloadAnalyzer_AnalyzeWorkload_FullMethodName = "/workloadanalyzer.WorkloadAnalyzer/AnalyzeWorkload"
+	WorkloadAnalyzer_AnalyzeWorkload_FullMethodName = "/analyzer.WorkloadAnalyzer/AnalyzeWorkload"
 )
 
 // WorkloadAnalyzerClient is the client API for WorkloadAnalyzer service.
@@ -108,7 +108,7 @@ func _WorkloadAnalyzer_AnalyzeWorkload_Handler(srv interface{}, ctx context.Cont
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var WorkloadAnalyzer_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "workloadanalyzer.WorkloadAnalyzer",
+	ServiceName: "analyzer.WorkloadAnalyzer",
 	HandlerType: (*WorkloadAnalyzerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -117,5 +117,5 @@ var WorkloadAnalyzer_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/workload_analyzer.proto",
+	Metadata: "api/proto/analyzer.proto",
 }
