@@ -44,6 +44,23 @@ grpcurl -plaintext -d '{
 }' localhost:50052 analyzer.WorkloadAnalyzer/AnalyzeWorkload
 ```
 
+## Example Output
+
+```json
+{
+  "analysis": "Overall analysis of the workload",
+  "recommendations": [
+    {
+      "category": "security",
+      "description": "Container running as root",
+      "severity": "high",
+      "suggested_action": "Add securityContext with runAsNonRoot: true"
+    }
+  ]
+}
+```
+
 ## License
 
 This project is licensed under the MIT License.
+
