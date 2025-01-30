@@ -4,107 +4,147 @@ import (
     "bytes"
     "encoding/json"
     "fmt"
-    "net/http"
     "io"
+    "net/http"
+    "strings"
+    "k8s-workload-analyzer/pkg/ai/prompts"
 )
 
 type GPTClient struct {
-    apiKey  string
-    baseURL string
-}
-
-type gptRequest struct {
-    Model       string    `json:"model"`
-    Messages    []message `json:"messages"`
-    Temperature float64   `json:"temperature"`
-}
-
-type message struct {
-    Role    string `json:"role"`
-    Content string `json:"content"`
+    apiKey string
 }
 
 func NewGPTClient(apiKey string) *GPTClient {
-    return &GPTClient{
-        apiKey:  apiKey,
-        baseURL: "https://api.openai.com/v1/chat/completions",
-    }
+    return &GPTClient{apiKey: apiKey}
 }
 
-func (c *GPTClient) AnalyzeWorkload(yaml, namespace, workloadType, workloadName string) (*WorkloadAnalysis, error) {
-    prompt := fmt.Sprintf(`Analyze this Kubernetes %s named "%s" in namespace "%s" and provide security, performance, and best practices recommendations:
-
-%s
-
-Please format your response as JSON with the following structure:
-{
-    "analysis": "overall analysis text",
-    "recommendations": [
-        {
-            "category": "security|performance|best-practices",
-            "description": "issue description",
-            "severity": "high|medium|low",
-            "suggested_action": "how to fix"
+func summarizeYAML(yaml string) string {
+    lines := strings.Split(yaml, "\n")
+    summary := []string{}
+    
+    inContainer := false
+    for _, line := range lines {
+        // Focus on container section
+        if strings.Contains(line, "containers:") {
+            inContainer = true
+            summary = append(summary, line)
+            continue
         }
-    ]
-}`, workloadType, workloadName, namespace, yaml)
+        
+        // Include container-specific fields
+        if inContainer && (
+            strings.Contains(line, "name:") ||
+            strings.Contains(line, "image:") ||
+            strings.Contains(line, "resources:") ||
+            strings.Contains(line, "limits:") ||
+            strings.Contains(line, "requests:") ||
+            strings.Contains(line, "securityContext:") ||
+            strings.Contains(line, "volumeMounts:") ||
+            strings.Contains(line, "ports:") ||
+            strings.Contains(line, "livenessProbe:") ||
+            strings.Contains(line, "readinessProbe:")) {
+            summary = append(summary, line)
+        }
+        
+        // Exit container section when indentation changes
+        if inContainer && !strings.HasPrefix(line, "      ") {
+            inContainer = false
+        }
+    }
+    
+    return strings.Join(summary, "\n")
+}
 
-    payload := gptRequest{
-        Model: "gpt-3.5-turbo-0125",  // Changed from "gpt-4" to "gpt-3.5-turbo"
-        Messages: []message{
+func (c *GPTClient) AnalyzeWorkload(yaml string) (*WorkloadAnalysis, error) {
+    // Summarize YAML before sending to GPT
+    summarizedYAML := summarizeYAML(yaml)
+    
+    payload := map[string]interface{}{
+        "model": "gpt-3.5-turbo",
+        "messages": []map[string]string{
             {
-                Role:    "user",
-                Content: prompt,
+                "role":    "system",
+                "content": "You are a Kubernetes container expert. Focus on analyzing container configuration, resources, and best practices.",
+            },
+            {
+                "role":    "user",
+                "content": fmt.Sprintf(prompts.WorkloadAnalysisTemplate, summarizedYAML),
             },
         },
-        Temperature: 0.3,
+        "temperature": 0.1,
+        "response_format": map[string]string{
+            "type": "json_object",
+        },
     }
 
     jsonData, err := json.Marshal(payload)
     if err != nil {
-        return nil, err
+        return nil, fmt.Errorf("failed to marshal request: %v", err)
     }
 
-    req, err := http.NewRequest("POST", c.baseURL, bytes.NewBuffer(jsonData))
+    req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(jsonData))
     if err != nil {
-        return nil, err
+        return nil, fmt.Errorf("failed to create request: %v", err)
     }
 
     req.Header.Set("Authorization", "Bearer "+c.apiKey)
     req.Header.Set("Content-Type", "application/json")
 
-    client := &http.Client{}
-    resp, err := client.Do(req)
+    resp, err := http.DefaultClient.Do(req)
     if err != nil {
-        return nil, err
+        return nil, fmt.Errorf("failed to make request: %v", err)
     }
     defer resp.Body.Close()
 
     if resp.StatusCode != http.StatusOK {
         body, _ := io.ReadAll(resp.Body)
-        return nil, fmt.Errorf("API request failed with status: %d, body: %s", resp.StatusCode, string(body))
+        return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
     }
 
-    var gptResponse struct {
+    var result struct {
         Choices []struct {
             Message struct {
                 Content string `json:"content"`
             } `json:"message"`
         } `json:"choices"`
+        Error *struct {
+            Message string `json:"message"`
+        } `json:"error"`
     }
 
-    if err := json.NewDecoder(resp.Body).Decode(&gptResponse); err != nil {
-        return nil, fmt.Errorf("failed to decode GPT response: %v", err)
+    if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+        return nil, fmt.Errorf("failed to decode response: %v", err)
     }
 
-    if len(gptResponse.Choices) == 0 {
+    if result.Error != nil {
+        return nil, fmt.Errorf("API error: %s", result.Error.Message)
+    }
+
+    if len(result.Choices) == 0 {
         return nil, fmt.Errorf("no response from GPT")
     }
 
-    var result WorkloadAnalysis
-    if err := json.Unmarshal([]byte(gptResponse.Choices[0].Message.Content), &result); err != nil {
-        return nil, fmt.Errorf("failed to parse GPT analysis: %v", err)
+    // Improved content cleanup
+    content := result.Choices[0].Message.Content
+    content = strings.TrimSpace(content)
+    
+    // Remove any markdown or explanation text
+    if idx := strings.Index(content, "{"); idx >= 0 {
+        content = content[idx:]
+        if lastIdx := strings.LastIndex(content, "}"); lastIdx >= 0 {
+            content = content[:lastIdx+1]
+        }
     }
 
-    return &result, nil
+    // Verify JSON structure
+    if !strings.HasPrefix(content, "{") || !strings.HasSuffix(content, "}") {
+        return nil, fmt.Errorf("invalid JSON response format: %s", content)
+    }
+
+    var analysis WorkloadAnalysis
+    if err := json.Unmarshal([]byte(content), &analysis); err != nil {
+        return nil, fmt.Errorf("failed to parse analysis (content: %s): %v", content, err)
+    }
+
+    return &analysis, nil
 }

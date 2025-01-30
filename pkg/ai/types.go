@@ -1,11 +1,16 @@
 package ai
 
 type WorkloadAnalysis struct {
-    Analysis         string `json:"analysis"`
-    Recommendations []struct {
-        Category        string `json:"category"`
-        Description    string `json:"description"`
-        Severity       string `json:"severity"`
-        SuggestedAction string `json:"suggested_action"`
-    } `json:"recommendations"`
+    MainContainer     string   `json:"main_container"`
+    PodQoSClass      string   `json:"pod_qos_class"`
+    ReplicaCount     string   `json:"replica_count"`
+    CPUUtilization   string   `json:"cpu_utilization"`
+    MemoryUtilization string  `json:"memory_utilization"`
+    EfficiencyRate   string   `json:"efficiency_rate"`
+    ReliabilityRisk  string   `json:"reliability_risk"`
+    Analysis         string   `json:"analysis"`
+    Opportunities    []string `json:"opportunities"`
+    Cautions        []string `json:"cautions"`
+    Blockers        []string `json:"blockers"`
+    Recommendations []string `json:"recommendations"`
 }

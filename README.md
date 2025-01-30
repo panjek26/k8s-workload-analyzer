@@ -1,66 +1,26 @@
 # Kubernetes Workload Analyzer
 
-A gRPC service that analyzes Kubernetes workloads using AI to provide security, performance, and best practices recommendations.
+A command-line tool that analyzes Kubernetes workloads and provides detailed insights about resource utilization, efficiency, and best practices recommendations.
 
 ## Features
 
-- **Workload Analysis:** Supports Deployments, StatefulSets, and DaemonSets.
-- **Recommendations:** Provides insights for:
-  - Security enhancements
-  - Performance optimizations
-  - Kubernetes best practices
-- **gRPC Interface:** Enables seamless integration.
-- **Multi-Namespace Support:** Analyze workloads across different namespaces.
-- **AI-Powered Insights:** Uses GPT to generate recommendations.
+- Real-time resource metrics analysis
+- Efficiency rate calculation
+- AI-powered configuration analysis
+- Best practices recommendations
+- Security insights
+- Performance optimization suggestions
 
 ## Prerequisites
 
-- Go 1.19 or later
+- Go 1.19 or higher
 - Access to a Kubernetes cluster
-- GPT API key
-- `grpcurl` (optional, for testing)
+- OpenAI API key
+- Kubernetes metrics server installed in your cluster
 
 ## Installation
 
-```sh
-git clone https://github.com/panjek26/k8s-workload-analyzer.git
+```bash
+git clone https://github.com/yourusername/k8s-workload-analyzer.git
 cd k8s-workload-analyzer
-go mod tidy
-```
-
-## Running the Server
-
-```sh
-go run cmd/main.go -api-key "your-gpt-api-key" -port 50052
-```
-
-## Usage Example
-
-```sh
-grpcurl -plaintext -d '{
-  "namespace": "your-namespace",
-  "workload_type": "deployment",
-  "workload_name": "your-deployment-name"
-}' localhost:50052 analyzer.WorkloadAnalyzer/AnalyzeWorkload
-```
-
-## Example Output
-
-```json
-{
-  "analysis": "Overall analysis of the workload",
-  "recommendations": [
-    {
-      "category": "security",
-      "description": "Container running as root",
-      "severity": "high",
-      "suggested_action": "Add securityContext with runAsNonRoot: true"
-    }
-  ]
-}
-```
-
-## License
-
-This project is licensed under the MIT License.
-
+go build -o kwa cmd/main.go
